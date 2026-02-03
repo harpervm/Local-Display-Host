@@ -1,0 +1,78 @@
+<Window x:Class="LocalDisplayHost.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Local Display Host" Height="420" Width="480"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="CanMinimize">
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Status -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,16">
+            <TextBlock Text="Status" FontWeight="SemiBold" FontSize="14"/>
+            <Border Background="#F0F0F0" Padding="12,10" Margin="0,6,0,0">
+                <StackPanel Orientation="Horizontal">
+                    <Ellipse x:Name="StatusIndicator" Width="12" Height="12" Fill="#C0C0C0" Margin="0,0,10,0"/>
+                    <TextBlock x:Name="StatusText" Text="Stopped" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+
+        <!-- Connection URL for other device -->
+        <StackPanel Grid.Row="1" Margin="0,0,0,16">
+            <TextBlock Text="Open this URL on your other device (e.g. iMac, secondary display)" FontWeight="SemiBold" FontSize="14"/>
+            <Border Background="#E8F4FD" Padding="12,10" Margin="0,6,0,0">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock x:Name="DisplayUrlText" Text="http://192.168.1.85:8080/display" 
+                               FontFamily="Consolas" FontSize="13" TextWrapping="Wrap" 
+                               VerticalAlignment="Center" IsHitTestVisible="False"/>
+                    <Button Grid.Column="1" Content="Copy" Padding="12,6" Margin="8,0,0,0"
+                            Click="CopyUrl_Click"/>
+                </Grid>
+            </Border>
+        </StackPanel>
+
+        <!-- Display to extend -->
+        <StackPanel Grid.Row="2" Margin="0,0,0,16">
+            <TextBlock Text="Display to stream" FontWeight="SemiBold" FontSize="14"/>
+            <TextBlock Text="Choose which existing display to show on the other device. This app does not create a new monitor. For a true second display (extend Windows to e.g. iMac), install a virtual display driver first, then select Monitor 2 here." 
+                       Foreground="Gray" FontSize="11" Margin="0,2,0,0" TextWrapping="Wrap"/>
+            <ComboBox x:Name="DisplayComboBox" Margin="0,6,0,0" MinWidth="200" HorizontalAlignment="Left"/>
+        </StackPanel>
+
+        <!-- Server control -->
+        <StackPanel Grid.Row="3" Margin="0,0,0,16">
+            <TextBlock Text="Server" FontWeight="SemiBold" FontSize="14"/>
+            <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                <Button x:Name="StartButton" Content="Start server" Padding="16,10" 
+                        Click="StartButton_Click" IsDefault="True"/>
+                <Button x:Name="StopButton" Content="Stop server" Padding="16,10" Margin="8,0,0,0"
+                        Click="StopButton_Click" IsEnabled="False"/>
+            </StackPanel>
+        </StackPanel>
+
+        <!-- Connected clients -->
+        <StackPanel Grid.Row="4" Margin="0,0,0,16">
+            <TextBlock Text="Connected displays" FontWeight="SemiBold" FontSize="14"/>
+            <Border BorderBrush="#CCC" BorderThickness="1" Padding="12" Margin="0,6,0,0" MinHeight="80">
+                <ListBox x:Name="ClientsListBox" BorderThickness="0" Background="Transparent"/>
+            </Border>
+        </StackPanel>
+
+        <TextBlock Grid.Row="5" x:Name="FooterText" Text="Port: 8080 • Click on other device (e.g. iMac) to control extended display"
+                   Foreground="Gray" FontSize="11"/>
+        <TextBlock Grid.Row="6" Text="Application by HarperServices.nl" Foreground="Gray" FontSize="11" Margin="0,4,0,0"/>
+    </Grid>
+</Window>
