@@ -141,6 +141,12 @@ public class DisplayServer : IDisposable
                 }
             }
 
+            if (path == "/ping" || path == "/alive")
+            {
+                await SendResponseAsync(stream, 200, "text/plain", "OK").ConfigureAwait(false);
+                return;
+            }
+
             if (path == "" || path == "/" || path == "/display" || path == "/index.html")
             {
                 var html = GetDisplayPageHtml();
@@ -344,7 +350,8 @@ public class DisplayServer : IDisposable
             z-index: 10;
         }
         .status.connected { color: #4ade80; }
-        .status.error { color: #f87171; }
+        .status.unstable { color: #fb923c; font-weight: 600; }
+        .status.error { color: #f87171; font-weight: 600; }
     </style>
 </head>
 <body>
@@ -355,8 +362,42 @@ public class DisplayServer : IDisposable
     <script>
         const img = document.getElementById('stream');
         const status = document.getElementById('status');
-        img.onload = () => { status.textContent = 'Connected – click on the image to focus, then use mouse and keyboard'; status.className = 'status connected'; };
-        img.onerror = () => { status.textContent = 'Stream error'; status.className = 'status error'; };
+        let streamCheckInterval = null;
+        let unstableTimeout = null;
+        function showStreamStopped() {
+            status.textContent = 'Stream stopped';
+            status.className = 'status error';
+            if (streamCheckInterval) { clearInterval(streamCheckInterval); streamCheckInterval = null; }
+            if (unstableTimeout) { clearTimeout(unstableTimeout); unstableTimeout = null; }
+        }
+        function showUnstable() {
+            if (status.className === 'status error') return;
+            status.textContent = 'Unstable connection';
+            status.className = 'status unstable';
+            if (unstableTimeout) return;
+            unstableTimeout = setTimeout(showStreamStopped, 2000);
+        }
+        function clearUnstable() {
+            if (unstableTimeout) { clearTimeout(unstableTimeout); unstableTimeout = null; }
+            if (status.className === 'status unstable') {
+                status.textContent = 'Connected – click on the image to focus, then use mouse and keyboard';
+                status.className = 'status connected';
+            }
+        }
+        img.onload = () => {
+            status.textContent = 'Connected – click on the image to focus, then use mouse and keyboard';
+            status.className = 'status connected';
+            function checkServer() {
+                const ctrl = new AbortController();
+                const t = setTimeout(() => ctrl.abort(), 2000);
+                fetch(window.location.origin + '/ping', { method: 'GET', cache: 'no-store', signal: ctrl.signal })
+                    .then(r => { clearTimeout(t); if (r.ok) clearUnstable(); else showUnstable(); })
+                    .catch(() => { clearTimeout(t); showUnstable(); });
+            }
+            streamCheckInterval = setInterval(checkServer, 1000);
+            setTimeout(checkServer, 500);
+        };
+        img.onerror = showStreamStopped;
 
         function norm(x, y) {
             const rect = img.getBoundingClientRect();
