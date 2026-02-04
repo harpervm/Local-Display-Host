@@ -330,7 +330,6 @@ public class DisplayServer : IDisposable
             max-height: 100%;
             object-fit: contain;
             background: #000;
-            cursor: none;
         }
         .status {
             position: fixed;

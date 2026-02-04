@@ -7,9 +7,13 @@ namespace LocalDisplayHost.Services;
 
 /// <summary>
 /// Captures the primary screen (or all screens) and returns JPEG bytes for streaming.
+/// Includes the host PC mouse cursor on the captured image when visible.
 /// </summary>
 public class ScreenCapture
 {
+    private const int CursorShowing = 0x00000001;
+    private const int DiNormal = 0x0003;
+
     private int _quality = 75; // JPEG quality 1-100
 
     [DllImport("user32.dll")]
@@ -18,10 +22,47 @@ public class ScreenCapture
     [DllImport("user32.dll")]
     private static extern IntPtr GetDesktopWindow();
 
+    [DllImport("user32.dll")]
+    private static extern bool GetCursorInfo(ref CursorInfo pci);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool DrawIconEx(IntPtr hdc, int xLeft, int yTop, IntPtr hIcon, int cxWidth, int cyHeight, int istepIfAniCur, IntPtr hbrFlickerFreeDraw, int diFlags);
+
+    [DllImport("user32.dll")]
+    private static extern bool GetIconInfo(IntPtr hIcon, out IconInfo piconinfo);
+
+    [DllImport("gdi32.dll")]
+    private static extern bool DeleteObject(IntPtr hObject);
+
     [StructLayout(LayoutKind.Sequential)]
     private struct RECT
     {
         public int Left, Top, Right, Bottom;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct Point32
+    {
+        public int X, Y;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct CursorInfo
+    {
+        public int CbSize;
+        public int Flags;
+        public IntPtr HCursor;
+        public Point32 PtScreenPos;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct IconInfo
+    {
+        public int FIcon;      // 1 = icon, 0 = cursor
+        public int XHotspot;
+        public int YHotspot;
+        public IntPtr HbmMask;
+        public IntPtr HbmColor;
     }
 
     public int Quality
@@ -84,7 +125,7 @@ public class ScreenCapture
         return CaptureBounds(bounds);
     }
 
-    /// <summary>Capture a specific rectangle (e.g. primary screen).</summary>
+    /// <summary>Capture a specific rectangle (e.g. primary screen). Includes host cursor when visible.</summary>
     public byte[]? CaptureBounds(Rectangle bounds)
     {
         if (bounds.Width <= 0 || bounds.Height <= 0) return null;
@@ -93,9 +134,43 @@ public class ScreenCapture
         using (var g = Graphics.FromImage(bitmap))
         {
             g.CopyFromScreen(bounds.Location, Point.Empty, bounds.Size);
+            DrawCursorOnto(g, bounds);
         }
 
         return BitmapToJpeg(bitmap);
+    }
+
+    /// <summary>Draw the host PC cursor onto the bitmap when it is visible and within the captured bounds.</summary>
+    private static void DrawCursorOnto(Graphics g, Rectangle bounds)
+    {
+        var ci = new CursorInfo { CbSize = Marshal.SizeOf<CursorInfo>() };
+        if (!GetCursorInfo(ref ci) || (ci.Flags & CursorShowing) == 0 || ci.HCursor == IntPtr.Zero)
+            return;
+
+        int hotspotX = 0, hotspotY = 0;
+        if (GetIconInfo(ci.HCursor, out var ii))
+        {
+            hotspotX = ii.XHotspot;
+            hotspotY = ii.YHotspot;
+            if (ii.HbmMask != IntPtr.Zero) DeleteObject(ii.HbmMask);
+            if (ii.HbmColor != IntPtr.Zero) DeleteObject(ii.HbmColor);
+        }
+
+        int x = ci.PtScreenPos.X - bounds.Left - hotspotX;
+        int y = ci.PtScreenPos.Y - bounds.Top - hotspotY;
+        // Allow drawing slightly outside (cursor can extend past bounds)
+        if (x + 32 < 0 || y + 32 < 0 || x >= bounds.Width || y >= bounds.Height)
+            return;
+
+        IntPtr hdc = g.GetHdc();
+        try
+        {
+            DrawIconEx(hdc, x, y, ci.HCursor, 0, 0, 0, IntPtr.Zero, DiNormal);
+        }
+        finally
+        {
+            g.ReleaseHdc(hdc);
+        }
     }
 
     private byte[]? BitmapToJpeg(Bitmap bitmap)
