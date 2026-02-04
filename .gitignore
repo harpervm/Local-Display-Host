@@ -73,3 +73,6 @@ TestResult.xml
 publish/
 *.pubxml
 *.publishproj
+
+# Installer output (setup exe in installer folder)
+installer/*Setup*.exe

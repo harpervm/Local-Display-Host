@@ -26,6 +26,43 @@ dotnet run --project LocalDisplayHost\LocalDisplayHost.csproj
 
 Or open `LocalDisplay.sln` in Visual Studio and run the **LocalDisplayHost** project.
 
+### Run as .exe
+
+After building, the executable is at:
+
+- **Debug:** `LocalDisplayHost\bin\Debug\net10.0-windows\LocalDisplayHost.exe`
+
+Double‑click the .exe or run it from a terminal. The target PC must have the [.NET 10 runtime for Windows](https://dotnet.microsoft.com/download/dotnet/10.0) installed.
+
+### Publish a standalone .exe (no .NET install needed)
+
+To create a self-contained folder with `LocalDisplayHost.exe` that runs on any Windows x64 PC without installing .NET:
+
+```bash
+dotnet publish LocalDisplayHost\LocalDisplayHost.csproj -p:PublishProfile=win-x64
+```
+
+Output goes to `publish\win-x64\`. Copy that folder to another PC and run `LocalDisplayHost.exe`; no .NET installation is required.
+
+### Installable setup (.exe) — updatable
+
+To build an installable **Setup.exe** that installs to Program Files, adds Start Menu and optional Desktop shortcut, and appears in Add/Remove Programs:
+
+1. **Install [Inno Setup 6](https://jrsoftware.org/isinfo.php)** (free).
+2. Publish the app (if you haven’t already):
+   ```bash
+   dotnet publish LocalDisplayHost\LocalDisplayHost.csproj -p:PublishProfile=win-x64
+   ```
+3. Open `installer\LocalDisplayHost.iss` in Inno Setup and click **Build → Compile**, or from a command prompt (e.g. from the repo root):
+   ```bash
+   "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer\LocalDisplayHost.iss
+   ```
+
+The setup is written to `publish\LocalDisplayHostSetup-1.0.0.exe` (or the version in the script). Distribute that file; users run it to install.
+
+**To release an update:**  
+Edit `installer\LocalDisplayHost.iss`, change the line `#define MyAppVersion "1.0.0"` to a higher version (e.g. `"1.0.1"`), then publish the app and recompile the script. Users can run the new setup to upgrade (the installer will replace the previous version).
+
 ## Usage
 
 This application needs a **virtual display** in order to work as an extended display. Install the driver first, then use the app.
